@@ -15,11 +15,6 @@ export default function Chatbot() {
     { role: "user" | "bot"; content: string }[]
   >([]);
   const [type, setType] = useState("General");
-  const [emailData, setEmailData] = useState({
-    subject: "",
-    body: "",
-    to: "",
-  });
 
   const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || ""; // Use .env.local
 
@@ -114,27 +109,10 @@ export default function Chatbot() {
         return
       }
 
-      // Check if the response contains email-like structure (Subject, To, Body)
-      const emailRegex = /Subject:\s*(.*?)\nTo:\s*(.*?)\nBody:\s*(.*?)$/;
-      const match = botResponse.match(emailRegex);
-
-      if (match) {
-        // If the response matches the email pattern, extract the parts
-        const subject = match[1]?.trim() || "";
-        const to = match[2]?.trim() || "";
-        const body = match[3]?.trim() || "";
-
-        // Set email data with the extracted values
-        setEmailData({ subject, body, to });
-      } else {
-        // Reset email data if not an email response
-        setEmailData({ subject: "", body: "", to: "" });
-      }
-
       await streamBotResponse(botResponse);
     } catch (error) {
+      console.log(error);
       await streamBotResponse("An error occurred. Please try again.");
-    } finally {
     }
   };
 
