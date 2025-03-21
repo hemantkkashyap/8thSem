@@ -350,7 +350,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className="w-[100%] chats pb-20 h-[80vh] md:w-[60%] mx-auto p-4 flex flex-col gap-4 overflow-y-auto">
+      <div className="w-[100%] max-w-[1500px] chats pb-20 h-[80vh] md:w-[60%] mx-auto p-4 flex flex-col gap-4 overflow-y-auto">
         {chats.map((chat, index) => (
           <div
             key={index}
