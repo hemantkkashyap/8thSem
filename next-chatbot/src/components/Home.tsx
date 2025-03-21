@@ -2,7 +2,6 @@
 import { Fragment, useState } from "react";
 import { LinkedIn, GitHub, HelpOutline } from "@mui/icons-material";
 import SendIcon from "@mui/icons-material/Send";
-import IconButton from "@mui/material/IconButton";
 
 type EmailParsed = {
   subject: string;
