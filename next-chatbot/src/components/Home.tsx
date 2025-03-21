@@ -1,6 +1,8 @@
 "use client";
 import { Fragment, useState } from "react";
 import { LinkedIn, GitHub, HelpOutline } from "@mui/icons-material";
+import SendIcon from "@mui/icons-material/Send";
+import IconButton from "@mui/material/IconButton";
 
 type EmailParsed = {
   subject: string;
@@ -9,6 +11,7 @@ type EmailParsed = {
 
 export default function Home() {
   const [open, setOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
   const [selectedOption, setSelectedOption] = useState("General"); // Track selected option
   const [userText, setUserText] = useState("");
   const [chats, setChats] = useState<
@@ -20,114 +23,137 @@ export default function Home() {
 
   const handleSubmit = async () => {
     console.log(chats);
-
-    if (!userText.trim()) return; // Prevent empty submissions
-
+  
+    if (!userText.trim()) {
+      alert("Message cannot be empty");
+      return;
+    }
+  
     const newUserMessage: { role: "user" | "bot"; content: string } = {
       role: "user",
       content: userText,
     };
     setChats((prev) => [...prev, newUserMessage]); // Add user message to chat history
-
+  
+    // Add bot message for "Processing..." while waiting for the response
+    const processingMessage: { role: "bot"; content: string } = {
+      role: "bot",
+      content: "Processing...",
+    };
+    setChats((prev) => [...prev, processingMessage]);
+  
     let res; // ✅ Declare response variable outside the condition block
-
+  
     try {
-       const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-    if (type === "General") {
-      res = await fetch(`${baseURL}/chat/ask`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          question: userText,
-          type: type,
-        }),
-      });
-    } else if (type === "GitHub") {
-      res = await fetch(`${baseURL}/github`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          question: userText,
-          type: type,
-        }),
-      });
-    } else if (type === "Email") {
-      res = await fetch(`${baseURL}/email/send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          question: userText,
-          type: type,
-        }),
-      });
-    } else if (type === "Linkedin") {
-      res = await fetch(`${baseURL}/linkedin/connect`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          question: userText,
-          type: type,
-        }),
-      });
-    } else {
-      // Default to general if no type matches
-      res = await fetch(`${baseURL}/chat/ask`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          question: userText,
-          type: type,
-        }),
-      });
-    }
-      
-     setUserText(""); // Clear input after sending
+      const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+  
+      if (type === "General") {
+        res = await fetch(`${baseURL}/chat/ask`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            question: userText,
+            type: type,
+          }),
+        });
+      } else if (type === "GitHub") {
+        res = await fetch(`${baseURL}/github`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            question: userText,
+            type: type,
+          }),
+        });
+      } else if (type === "Email") {
+        res = await fetch(`${baseURL}/email/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            question: userText,
+            type: type,
+          }),
+        });
+      } else if (type === "Linkedin") {
+        res = await fetch(`${baseURL}/linkedin/connect`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            question: userText,
+            type: type,
+          }),
+        });
+      } else {
+        // Default to general if no type matches
+        res = await fetch(`${baseURL}/chat/ask`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            question: userText,
+            type: type,
+          }),
+        });
+      }
+  
+      setUserText(""); // Clear input after sending
       const data = await res.json();
       const botResponse = data.answer || data.message;
-
+  
       console.log(botResponse, data);
-
-      if(data.error){
+  
+      if (data.error) {
         console.log(data.error);
+        // Update "Processing..." message to error
         await streamBotResponse(data.error);
-        return
+        return;
       }
-
+  
+      // If no error, update "Processing..." message to the bot response
       await streamBotResponse(botResponse);
     } catch (error) {
       console.log(error);
+      // In case of error, update "Processing..." message to a generic error message
       await streamBotResponse("An error occurred. Please try again.");
     }
   };
-
+  
   const streamBotResponse = async (botResponse: string) => {
     let index = 0;
     let currentMessage = "";
-
+  
+    // Update the last bot message to show the final response (in case it's not processed yet)
+    setChats((prevChats) => {
+      const updatedChats = [...prevChats];
+      updatedChats[updatedChats.length - 1] = {
+        role: "bot",
+        content: "", // Clear the "Processing..." message first if required
+      };
+      return updatedChats;
+    });
+  
     // Add an empty bot message first
     setChats((prevChats) => [...prevChats, { role: "bot", content: "" }]);
-
+  
     const interval = setInterval(() => {
       if (index < botResponse.length) {
         currentMessage += botResponse[index];
         index++;
-
+  
         // Update the last bot message in chat progressively
         setChats((prevChats) => {
           const updatedChats = [...prevChats];
@@ -140,9 +166,9 @@ export default function Home() {
       } else {
         clearInterval(interval); // Done streaming
       }
-    }, 0); // Adjust typing speed here (lower = faster)
+    }, 1); // Adjust typing speed here (lower = faster)
   };
-
+  
   const options = [
     { name: "LinkedIn", icon: <LinkedIn className="text-blue-600" /> },
     { name: "GitHub", icon: <GitHub className="text-black" /> },
@@ -159,20 +185,26 @@ export default function Home() {
     setUserText(e.target.value);
   };
 
-
-
   const handleSendEmail = async (
     to: string,
     Subject: string,
     Message: string
   ) => {
     // Logic to send email
+
+    if (!to.trim()) {
+      alert("Email cannot be empty");
+      return;
+    }
+  
+
+    setUserEmail('');
     console.log("Sending email with the following data:");
     console.log(`To:`, to);
     console.log(`Subject:`, Subject);
     console.log(`Body: `, Message);
 
-    try{
+    try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/send-email`,
         {
@@ -185,12 +217,12 @@ export default function Home() {
             to_email: to,
             subject: Subject,
 
-            body: Message
+            body: Message,
           }),
         }
       );
 
-      if(res.ok){
+      if (res.ok) {
         const newUserMessage: { role: "user" | "bot"; content: string } = {
           role: "user",
           content: "",
@@ -206,23 +238,22 @@ export default function Home() {
           return updatedChats;
         });
       }
-    }
-    catch (e){
-        console.log(e);
-        const newUserMessage: { role: "user" | "bot"; content: string } = {
-          role: "user",
-          content: "",
-        };
-        setChats((prev) => [...prev, newUserMessage]);
+    } catch (e) {
+      console.log(e);
+      const newUserMessage: { role: "user" | "bot"; content: string } = {
+        role: "user",
+        content: "",
+      };
+      setChats((prev) => [...prev, newUserMessage]);
 
-        setChats((prevChats) => {
-          const updatedChats = [...prevChats];
-          updatedChats[updatedChats.length - 1] = {
-            role: "bot",
-            content: "❌ Failed to Sent Email",
-          };
-          return updatedChats;
-        });
+      setChats((prevChats) => {
+        const updatedChats = [...prevChats];
+        updatedChats[updatedChats.length - 1] = {
+          role: "bot",
+          content: "❌ Failed to Sent Email",
+        };
+        return updatedChats;
+      });
     }
   };
 
@@ -336,10 +367,28 @@ export default function Home() {
                   return (
                     emailData && (
                       <div className="w-[100%] md:w-[60%] mx-auto p-4 mt-4">
+                        <div className="flex flex-col">
+                          <label
+                            htmlFor="recipientEmail"
+                            className="text-gray-700"
+                          >
+                            Recipient Email
+                          </label>
+                          <input
+                            type="email"
+                            id="recipientEmail"
+                            value={userEmail}
+                            onChange={(e) => setUserEmail(e.target.value)}
+                            placeholder="Enter recipient's email"
+                            className="w-full p-2 mt-2 border border-gray-700 rounded-lg"
+                            required
+                            autoComplete="email"
+                          />
+                        </div>
                         <button
                           onClick={() =>
                             handleSendEmail(
-                              "kashyaphemantk@gmail.com",
+                              userEmail,
                               emailData.subject,
                               emailData.body
                             )
@@ -375,14 +424,14 @@ export default function Home() {
             className="w-full p-2 min-h-[15vh] rounded-lg focus:outline-none"
             placeholder="Ask me anything..."
             value={userText}
-            onKeyDown={handleKeyPress} 
+            onKeyDown={handleKeyPress}
             onChange={handleUserText}
           />
           <button
-            className="absolute right-4 bottom-4 cursor-pointer rounded-md border-2 flex justify-center items-center w-[40px] h-[40px]"
+            className="absolute right-4 bottom-4 cursor-pointer rounded-md flex justify-center items-center w-[40px] h-[40px]"
             onClick={handleSubmit}
           >
-            →
+            <SendIcon />
           </button>
         </div>
       </div>
