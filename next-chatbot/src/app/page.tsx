@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, useState } from "react";
-import { LinkedIn, GitHub, Email, HelpOutline } from "@mui/icons-material";
+import { LinkedIn, GitHub, HelpOutline } from "@mui/icons-material";
 
 type EmailParsed = {
   subject: string;
