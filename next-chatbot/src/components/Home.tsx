@@ -2,6 +2,7 @@
 import { Fragment, useState } from "react";
 import { LinkedIn, GitHub, HelpOutline } from "@mui/icons-material";
 import SendIcon from "@mui/icons-material/Send";
+import firebaseGoogleLogin from "../firebaseLogin";
 
 type EmailParsed = {
   subject: string;
@@ -10,7 +11,7 @@ type EmailParsed = {
 
 export default function Home() {
   const [open, setOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
+  const [userEmail, setUserEmail] = useState("");
   const [selectedOption, setSelectedOption] = useState("General"); // Track selected option
   const [userText, setUserText] = useState("");
   const [chats, setChats] = useState<
@@ -22,30 +23,30 @@ export default function Home() {
 
   const handleSubmit = async () => {
     console.log(chats);
-  
+
     if (!userText.trim()) {
       alert("Message cannot be empty");
       return;
     }
-  
+
     const newUserMessage: { role: "user" | "bot"; content: string } = {
       role: "user",
       content: userText,
     };
     setChats((prev) => [...prev, newUserMessage]); // Add user message to chat history
-  
+
     // Add bot message for "Processing..." while waiting for the response
     const processingMessage: { role: "bot"; content: string } = {
       role: "bot",
       content: "Processing...",
     };
     setChats((prev) => [...prev, processingMessage]);
-  
+
     let res; // ✅ Declare response variable outside the condition block
-  
+
     try {
       const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL;
-  
+
       if (type === "General") {
         res = await fetch(`${baseURL}/chat/ask`, {
           method: "POST",
@@ -108,20 +109,20 @@ export default function Home() {
           }),
         });
       }
-  
+
       setUserText(""); // Clear input after sending
       const data = await res.json();
       const botResponse = data.answer || data.message;
-  
+
       console.log(botResponse, data);
-  
+
       if (data.error) {
         console.log(data.error);
         // Update "Processing..." message to error
         await streamBotResponse(data.error);
         return;
       }
-  
+
       // If no error, update "Processing..." message to the bot response
       await streamBotResponse(botResponse);
     } catch (error) {
@@ -130,11 +131,11 @@ export default function Home() {
       await streamBotResponse("An error occurred. Please try again.");
     }
   };
-  
+
   const streamBotResponse = async (botResponse: string) => {
     let index = 0;
     let currentMessage = "";
-  
+
     // Update the last bot message to show the final response (in case it's not processed yet)
     setChats((prevChats) => {
       const updatedChats = [...prevChats];
@@ -144,15 +145,15 @@ export default function Home() {
       };
       return updatedChats;
     });
-  
+
     // Add an empty bot message first
     setChats((prevChats) => [...prevChats, { role: "bot", content: "" }]);
-  
+
     const interval = setInterval(() => {
       if (index < botResponse.length) {
         currentMessage += botResponse[index];
         index++;
-  
+
         // Update the last bot message in chat progressively
         setChats((prevChats) => {
           const updatedChats = [...prevChats];
@@ -167,7 +168,7 @@ export default function Home() {
       }
     }, 1); // Adjust typing speed here (lower = faster)
   };
-  
+
   const options = [
     { name: "LinkedIn", icon: <LinkedIn className="text-blue-600" /> },
     { name: "GitHub", icon: <GitHub className="text-black" /> },
@@ -184,61 +185,154 @@ export default function Home() {
     setUserText(e.target.value);
   };
 
-  const handleSendEmail = async (
-    to: string,
-    Subject: string,
-    Message: string
-  ) => {
-    // Logic to send email
+  // const handleSendEmail = async (
+  //   to: string,
+  //   Subject: string,
+  //   Message: string
+  // ) => {
+  //   // Logic to send email
 
-    if (!to.trim()) {
-      alert("Email cannot be empty");
+  //   if (!to.trim()) {
+  //     alert("Email cannot be empty");
+  //     return;
+  //   }
+
+  //   setUserEmail('');
+  //   console.log("Sending email with the following data:");
+  //   console.log(`To:`, to);
+  //   console.log(`Subject:`, Subject);
+  //   console.log(`Body: `, Message);
+
+  //   try {
+  //     const res = await fetch(
+  //       `${process.env.NEXT_PUBLIC_BACKEND_URL}/send-email`,
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           Authorization: `Bearer ${GROQ_API_KEY}`,
+  //         },
+  //         body: JSON.stringify({
+  //           to_email: to,
+  //           subject: Subject,
+
+  //           body: Message,
+  //         }),
+  //       }
+  //     );
+
+  //     if (res.ok) {
+  //       const newUserMessage: { role: "user" | "bot"; content: string } = {
+  //         role: "user",
+  //         content: "",
+  //       };
+  //       setChats((prev) => [...prev, newUserMessage]);
+
+  //       setChats((prevChats) => {
+  //         const updatedChats = [...prevChats];
+  //         updatedChats[updatedChats.length - 1] = {
+  //           role: "bot",
+  //           content: "✅ Email Sent SuccessFully",
+  //         };
+  //         return updatedChats;
+  //       });
+  //     }
+  //   } catch (e) {
+  //     console.log(e);
+  //     const newUserMessage: { role: "user" | "bot"; content: string } = {
+  //       role: "user",
+  //       content: "",
+  //     };
+  //     setChats((prev) => [...prev, newUserMessage]);
+
+  //     setChats((prevChats) => {
+  //       const updatedChats = [...prevChats];
+  //       updatedChats[updatedChats.length - 1] = {
+  //         role: "bot",
+  //         content: "❌ Failed to Sent Email",
+  //       };
+  //       return updatedChats;
+  //     });
+  //   }
+  // };
+
+  const sendEmailWithGmailAPI = async (
+    to: string,
+    subject: string,
+    message: string
+  ) => {
+    const accessToken = sessionStorage.getItem("gmailAccessToken");
+    if (!accessToken) {
+      alert("Access Token Missing! Please login again.");
       return;
     }
-  
 
-    setUserEmail('');
-    console.log("Sending email with the following data:");
-    console.log(`To:`, to);
-    console.log(`Subject:`, Subject);
-    console.log(`Body: `, Message);
+    // ✅ Construct raw email
+    const email = [
+      `To: ${to}`,
+      "Subject: " + subject,
+      "Content-Type: text/plain; charset=utf-8",
+      "",
+      message,
+    ].join("\n");
+
+    const base64EncodedEmail = btoa(unescape(encodeURIComponent(email)))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/send-email`,
+      const response = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/send`,
         {
           method: "POST",
           headers: {
+            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
-            Authorization: `Bearer ${GROQ_API_KEY}`,
           },
           body: JSON.stringify({
-            to_email: to,
-            subject: Subject,
-
-            body: Message,
+            raw: base64EncodedEmail,
           }),
         }
       );
 
-      if (res.ok) {
+      const data = await response.json();
+      if (response.ok) {
+        const newUserMessage: { role: "user" | "bot"; content: string } = {
+                  role: "user",
+                  content: "",
+                };
+                setChats((prev) => [...prev, newUserMessage]);
+        
+                setChats((prevChats) => {
+                  const updatedChats = [...prevChats];
+                  updatedChats[updatedChats.length - 1] = {
+                    role: "bot",
+                    content: "✅ Email Sent SuccessFully",
+                  };
+                  return updatedChats;
+                });
+        console.log("✅ Email sent successfully", data);
+        alert("✅ Email sent successfully!");
+      } else {
         const newUserMessage: { role: "user" | "bot"; content: string } = {
           role: "user",
           content: "",
         };
         setChats((prev) => [...prev, newUserMessage]);
-
+  
         setChats((prevChats) => {
           const updatedChats = [...prevChats];
           updatedChats[updatedChats.length - 1] = {
             role: "bot",
-            content: "✅ Email Sent SuccessFully",
+            content: "❌ Failed to Sent Email",
           };
           return updatedChats;
-        });
+              });
+        console.error("❌ Error:", data);
+        alert("❌ Failed to send email");
       }
-    } catch (e) {
-      console.log(e);
+    } catch (err) {
       const newUserMessage: { role: "user" | "bot"; content: string } = {
         role: "user",
         content: "",
@@ -252,7 +346,9 @@ export default function Home() {
           content: "❌ Failed to Sent Email",
         };
         return updatedChats;
-      });
+            });
+      console.error("❌ Exception while sending:", err);
+      alert("❌ Failed to send email");
     }
   };
 
@@ -319,6 +415,15 @@ export default function Home() {
     }
   };
 
+  const handleLogin = async () => {
+    try {
+      await firebaseGoogleLogin();
+      alert("✅ Login Successful");
+    } catch {
+      alert("❌ Login Failed");
+    }
+  };
+
   return (
     <div className="w-full h-screen bg-[#171717] relative overflow-hidden">
       <div className="absolute top-4 left-4 z-50">
@@ -348,6 +453,15 @@ export default function Home() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="absolute top-4 right-4 z-50">
+        <button
+          className="bg-chatbotBlue text-white px-4 py-2 rounded hover:bg-indigo-700"
+          onClick={handleLogin}
+        >
+          Login
+        </button>
       </div>
 
       <div className="w-[100%] max-w-[1500px] chats pb-20 h-[80vh] md:w-[60%] mx-auto p-4 flex flex-col gap-4 overflow-y-auto">
@@ -386,7 +500,7 @@ export default function Home() {
                         </div>
                         <button
                           onClick={() =>
-                            handleSendEmail(
+                            sendEmailWithGmailAPI(
                               userEmail,
                               emailData.subject,
                               emailData.body
