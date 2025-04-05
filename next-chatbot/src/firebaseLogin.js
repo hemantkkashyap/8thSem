@@ -18,9 +18,9 @@ const firebaseGoogleLogin = async () => {
     const accessToken = credential.accessToken;
 
     // ✅ Store in localStorage
-    sessionStorage.setItem("userEmail", user.email);
-    sessionStorage.setItem("userIdToken", idToken);
-    sessionStorage.setItem("gmailAccessToken", accessToken);
+    localStorage.setItem("userEmail", user.email);
+    localStorage.setItem("userIdToken", idToken);
+    localStorage.setItem("gmailAccessToken", accessToken);
 
     console.log("✅ User Logged In: ", user.email);
     return { email: user.email, idToken, accessToken };

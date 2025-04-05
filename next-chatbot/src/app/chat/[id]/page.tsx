@@ -228,7 +228,7 @@ export default function Page() {
     subject: string,
     message: string
   ) => {
-    const accessToken = sessionStorage.getItem("gmailAccessToken");
+    const accessToken = localStorage.getItem("gmailAccessToken");
     if (!accessToken) {
       alert("Access Token Missing! Please login again.");
       return;
