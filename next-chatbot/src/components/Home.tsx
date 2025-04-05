@@ -1,28 +1,55 @@
 "use client";
-import { Fragment, useState } from "react";
-import { LinkedIn, GitHub, HelpOutline } from "@mui/icons-material";
-import SendIcon from "@mui/icons-material/Send";
+import { useEffect, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
+import { useRouter } from "next/navigation";
+import StopCircleIcon from "@mui/icons-material/StopCircle";
+import GraphicEqIcon from "@mui/icons-material/GraphicEq";
 import firebaseGoogleLogin from "../firebaseLogin";
+import Navbar from "./Navbar";
 
 type EmailParsed = {
   subject: string;
   body: string;
 };
 
+type Chat = {
+  role: "user" | "bot";
+  content: string;
+};
+
 export default function Home() {
   const [open, setOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [userIdToken, setUserIdToken] = useState<string | null>(null);
+  const [usermail, setUserMail] = useState<string | null>(null);
   const [selectedOption, setSelectedOption] = useState("General"); // Track selected option
   const [userText, setUserText] = useState("");
   const [chats, setChats] = useState<
     { role: "user" | "bot"; content: string }[]
   >([]);
   const [type, setType] = useState("General");
-
+  const navigate = useRouter();
   const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || ""; // Use .env.local
+
+  useEffect(() => {
+    const token = localStorage.getItem("userIdToken");
+    const mail = localStorage.getItem("userEmail");
+    if (token) {
+      setUserIdToken(token);
+      setUserMail(mail)
+    }
+  }, []);
 
   const handleSubmit = async () => {
     console.log(chats);
+    setLoading(true);
+    const myUniqueId = uuidv4();
+
+    if(!userIdToken)
+    {
+      alert("Login First");
+      return
+    }
 
     if (!userText.trim()) {
       alert("Message cannot be empty");
@@ -33,14 +60,14 @@ export default function Home() {
       role: "user",
       content: userText,
     };
-    setChats((prev) => [...prev, newUserMessage]); // Add user message to chat history
+    updateChats((prev) => [...prev, newUserMessage]); // Add user message to chat history
 
     // Add bot message for "Processing..." while waiting for the response
     const processingMessage: { role: "bot"; content: string } = {
       role: "bot",
       content: "Processing...",
     };
-    setChats((prev) => [...prev, processingMessage]);
+    updateChats((prev) => [...prev, processingMessage]);
 
     let res; // ✅ Declare response variable outside the condition block
 
@@ -55,7 +82,8 @@ export default function Home() {
             Authorization: `Bearer ${GROQ_API_KEY}`,
           },
           body: JSON.stringify({
-            username: "hemant",
+            username: usermail,
+            session_id: myUniqueId,
             question: userText,
             type: type,
           }),
@@ -130,6 +158,8 @@ export default function Home() {
       console.log(error);
       // In case of error, update "Processing..." message to a generic error message
       await streamBotResponse("An error occurred. Please try again.");
+    } finally {
+      navigate.push(`/chat/${myUniqueId}`);
     }
   };
 
@@ -138,7 +168,7 @@ export default function Home() {
     let currentMessage = "";
 
     // Update the last bot message to show the final response (in case it's not processed yet)
-    setChats((prevChats) => {
+    updateChats((prevChats) => {
       const updatedChats = [...prevChats];
       updatedChats[updatedChats.length - 1] = {
         role: "bot",
@@ -148,7 +178,7 @@ export default function Home() {
     });
 
     // Add an empty bot message first
-    setChats((prevChats) => [...prevChats, { role: "bot", content: "" }]);
+    updateChats((prevChats) => [...prevChats, { role: "bot", content: "" }]);
 
     const interval = setInterval(() => {
       if (index < botResponse.length) {
@@ -156,7 +186,7 @@ export default function Home() {
         index++;
 
         // Update the last bot message in chat progressively
-        setChats((prevChats) => {
+        updateChats((prevChats) => {
           const updatedChats = [...prevChats];
           updatedChats[updatedChats.length - 1] = {
             role: "bot",
@@ -167,14 +197,16 @@ export default function Home() {
       } else {
         clearInterval(interval); // Done streaming
       }
-    }, 1); // Adjust typing speed here (lower = faster)
+    }, 1); // Typing speed
   };
 
-  const options = [
-    { name: "LinkedIn", icon: <LinkedIn className="text-blue-600" /> },
-    { name: "GitHub", icon: <GitHub className="text-black" /> },
-    { name: "General", icon: <HelpOutline className="text-gray-700" /> },
-  ];
+  const updateChats = (updater: (prev: Chat[]) => Chat[]) => {
+    setChats((prev) => {
+      const updated = updater(prev);
+      localStorage.setItem("chats", JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const handleOptionClick = (optionName: string) => {
     setType(optionName);
@@ -184,230 +216,6 @@ export default function Home() {
 
   const handleUserText = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setUserText(e.target.value);
-  };
-
-  // const handleSendEmail = async (
-  //   to: string,
-  //   Subject: string,
-  //   Message: string
-  // ) => {
-  //   // Logic to send email
-
-  //   if (!to.trim()) {
-  //     alert("Email cannot be empty");
-  //     return;
-  //   }
-
-  //   setUserEmail('');
-  //   console.log("Sending email with the following data:");
-  //   console.log(`To:`, to);
-  //   console.log(`Subject:`, Subject);
-  //   console.log(`Body: `, Message);
-
-  //   try {
-  //     const res = await fetch(
-  //       `${process.env.NEXT_PUBLIC_BACKEND_URL}/send-email`,
-  //       {
-  //         method: "POST",
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //           Authorization: `Bearer ${GROQ_API_KEY}`,
-  //         },
-  //         body: JSON.stringify({
-  //           to_email: to,
-  //           subject: Subject,
-
-  //           body: Message,
-  //         }),
-  //       }
-  //     );
-
-  //     if (res.ok) {
-  //       const newUserMessage: { role: "user" | "bot"; content: string } = {
-  //         role: "user",
-  //         content: "",
-  //       };
-  //       setChats((prev) => [...prev, newUserMessage]);
-
-  //       setChats((prevChats) => {
-  //         const updatedChats = [...prevChats];
-  //         updatedChats[updatedChats.length - 1] = {
-  //           role: "bot",
-  //           content: "✅ Email Sent SuccessFully",
-  //         };
-  //         return updatedChats;
-  //       });
-  //     }
-  //   } catch (e) {
-  //     console.log(e);
-  //     const newUserMessage: { role: "user" | "bot"; content: string } = {
-  //       role: "user",
-  //       content: "",
-  //     };
-  //     setChats((prev) => [...prev, newUserMessage]);
-
-  //     setChats((prevChats) => {
-  //       const updatedChats = [...prevChats];
-  //       updatedChats[updatedChats.length - 1] = {
-  //         role: "bot",
-  //         content: "❌ Failed to Sent Email",
-  //       };
-  //       return updatedChats;
-  //     });
-  //   }
-  // };
-
-  const sendEmailWithGmailAPI = async (
-    to: string,
-    subject: string,
-    message: string
-  ) => {
-    const accessToken = sessionStorage.getItem("gmailAccessToken");
-    if (!accessToken) {
-      alert("Access Token Missing! Please login again.");
-      return;
-    }
-
-    // ✅ Construct raw email
-    const email = [
-      `To: ${to}`,
-      "Subject: " + subject,
-      "Content-Type: text/plain; charset=utf-8",
-      "",
-      message,
-    ].join("\n");
-
-    const base64EncodedEmail = btoa(unescape(encodeURIComponent(email)))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-    try {
-      const response = await fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/send`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            raw: base64EncodedEmail,
-          }),
-        }
-      );
-
-      const data = await response.json();
-      if (response.ok) {
-        const newUserMessage: { role: "user" | "bot"; content: string } = {
-                  role: "user",
-                  content: "",
-                };
-                setChats((prev) => [...prev, newUserMessage]);
-        
-                setChats((prevChats) => {
-                  const updatedChats = [...prevChats];
-                  updatedChats[updatedChats.length - 1] = {
-                    role: "bot",
-                    content: "✅ Email Sent SuccessFully",
-                  };
-                  return updatedChats;
-                });
-        console.log("✅ Email sent successfully", data);
-        alert("✅ Email sent successfully!");
-      } else {
-        const newUserMessage: { role: "user" | "bot"; content: string } = {
-          role: "user",
-          content: "",
-        };
-        setChats((prev) => [...prev, newUserMessage]);
-  
-        setChats((prevChats) => {
-          const updatedChats = [...prevChats];
-          updatedChats[updatedChats.length - 1] = {
-            role: "bot",
-            content: "❌ Failed to Sent Email",
-          };
-          return updatedChats;
-              });
-        console.error("❌ Error:", data);
-        alert("❌ Failed to send email");
-      }
-    } catch (err) {
-      const newUserMessage: { role: "user" | "bot"; content: string } = {
-        role: "user",
-        content: "",
-      };
-      setChats((prev) => [...prev, newUserMessage]);
-
-      setChats((prevChats) => {
-        const updatedChats = [...prevChats];
-        updatedChats[updatedChats.length - 1] = {
-          role: "bot",
-          content: "❌ Failed to Sent Email",
-        };
-        return updatedChats;
-            });
-      console.error("❌ Exception while sending:", err);
-      alert("❌ Failed to send email");
-    }
-  };
-
-  const formatMessage = (message: string) => {
-    const codeBlockRegex = /```([\s\S]*?)```/g; // Detects triple-backtick code blocks
-    const inlineCodeRegex = /`([^`]+)`/g; // Detects inline code with single backticks
-    const lineBreakRegex = /\n/g; // Detects new lines
-
-    return message.split(codeBlockRegex).map((part, index) =>
-      index % 2 === 0 ? ( // Normal text (not inside triple backticks)
-        part.split(lineBreakRegex).map((line, lineIndex) => (
-          <Fragment key={lineIndex}>
-            {line.split(inlineCodeRegex).map((subPart, subIndex) =>
-              subIndex % 2 === 0 ? ( // Normal text
-                <span key={subIndex}>{subPart}</span>
-              ) : (
-                // Inline code
-                <code
-                  key={subIndex}
-                  className="text-white px-2 py-1 rounded-md text-sm font-mono"
-                >
-                  {subPart}
-                </code>
-              )
-            )}
-            <br />
-          </Fragment>
-        ))
-      ) : (
-        // Code block
-        <pre
-          key={index}
-          className="bg-gray-800 text-white p-3 rounded-md overflow-x-auto"
-        >
-          <code>{part}</code>
-        </pre>
-      )
-    );
-  };
-
-  const isEmailFormat = (message: string): EmailParsed | false => {
-    const subjectRegex = /Subject:\s*(.*)/i;
-    const subjectMatch = message.match(subjectRegex);
-
-    if (subjectMatch && subjectMatch[1]) {
-      const subject = subjectMatch[1].trim();
-      // Extract everything after the subject line as body
-      const bodyStartIndex =
-        message.indexOf(subjectMatch[0]) + subjectMatch[0].length;
-      const body = message.slice(bodyStartIndex).trim();
-
-      return {
-        subject,
-        body,
-      };
-    }
-
-    return false;
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLElement>) => {
@@ -427,126 +235,52 @@ export default function Home() {
 
   return (
     <div className="w-full h-screen bg-[#171717] relative overflow-hidden">
-      <div className="absolute top-4 left-4 z-50">
-        <button
-          className="bg-chatbotBlue text-white px-4 py-2 rounded hover:bg-indigo-700"
-          onClick={() => setOpen(!open)}
-        >
-          {selectedOption} {/* Display the selected option */}
-        </button>
+      <Navbar
+        open={open}
+        setOpen={setOpen}
+        selectedOption={selectedOption}
+        setSelectedOption={setSelectedOption}
+        handleOptionClick={handleOptionClick}
+      />
 
-        {open && (
-          <div className="mt-2 w-48 bg-white rounded-lg shadow-lg border overflow-hidden">
-            {options.map((option, idx) => (
-              <div
-                key={idx}
-                className={`flex items-center gap-3 px-4 py-2 cursor-pointer 
-                  ${
-                    selectedOption === option.name
-                      ? "bg-gray-200"
-                      : "hover:bg-gray-100"
-                  }`} // Highlight selected option
-                onClick={() => handleOptionClick(option.name)}
-              >
-                {option.icon}
-                <span className="text-gray-800">{option.name}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="absolute top-4 right-4 z-50">
-        <button
-          className="bg-chatbotBlue text-white px-4 py-2 rounded hover:bg-indigo-700"
-          onClick={handleLogin}
-        >
-          Login
-        </button>
-      </div>
-
-      <div className="w-[100%] max-w-[1500px] chats pb-20 h-[80vh] md:w-[60%] mx-auto p-4 flex flex-col gap-4 overflow-y-auto">
-        {chats.map((chat, index) => (
-          <div
-            key={index}
-            className={`p-3 ${
-              chat.role === "user" ? "self-end" : "self-start"
-            }`}
-          >
-            {chat.role === "bot" ? (
-              <div className="px-6 py-2 text-white">
-                {formatMessage(chat.content)}
-                {(() => {
-                  const emailData = isEmailFormat(chat.content);
-                  return (
-                    emailData && (
-                      <div className="w-[100%] md:w-[60%] mx-auto p-4 mt-4">
-                        <div className="flex flex-col">
-                          <label
-                            htmlFor="recipientEmail"
-                            className="text-gray-700"
-                          >
-                            Recipient Email
-                          </label>
-                          <input
-                            type="email"
-                            id="recipientEmail"
-                            value={userEmail}
-                            onChange={(e) => setUserEmail(e.target.value)}
-                            placeholder="Enter recipient's email"
-                            className="w-full p-2 mt-2 border border-gray-700 rounded-lg"
-                            required
-                            autoComplete="email"
-                          />
-                        </div>
-                        <button
-                          onClick={() =>
-                            sendEmailWithGmailAPI(
-                              userEmail,
-                              emailData.subject,
-                              emailData.body
-                            )
-                          }
-                          className="w-full bg-blue-500 text-white p-2 rounded-lg mt-4 hover:bg-blue-600"
-                        >
-                          Send Email
-                        </button>
-                      </div>
-                    )
-                  );
-                })()}
-              </div>
-            ) : (
-              <h1
-                className="px-6 py-2 lg:max-w-[80%] min-w-fit bg-[#292929] rounded-lg text-white"
-                style={{ boxShadow: "0px 0px 9px 2px rgba(34, 34, 34, 0.5)" }}
-              >
-                {chat.content}
-              </h1>
-            )}
-            <div className="w-full h-[1px] border"></div>
-          </div>
-        ))}
-      </div>
-
-      <div
-        className="max-w-lg mx-auto p-4 lg:rounded-lg mt-10 bg-[#292929] w-full lg:min-w-[800px] min-h-[10vh] fixed lg:bottom-6 bottom-0 left-1/2 transform -translate-x-1/2 "
-        style={{ boxShadow: "0px 0px 29px 12px rgba(34, 34, 34, 0.5)" }}
-      >
-        <div className="relative w-full text-white">
-          <textarea
-            className="w-full p-2 min-h-[15vh] rounded-lg focus:outline-none"
-            placeholder="Ask me anything..."
-            value={userText}
-            onKeyDown={handleKeyPress}
-            onChange={handleUserText}
-          />
+      {!userIdToken && (
+        <div className="absolute top-4 right-4 z-50">
           <button
-            className="absolute right-4 bottom-4 cursor-pointer rounded-md flex justify-center items-center w-[40px] h-[40px]"
-            onClick={handleSubmit}
+            className="bg-chatbotBlue text-white px-4 py-2 rounded hover:bg-indigo-700"
+            onClick={handleLogin}
           >
-            <SendIcon />
+            Login
           </button>
+        </div>
+      )}
+
+      <div className="w-[90%] fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <h2 className="p-4 text-2xl font-semibold text-white text-center">
+          What can I help with?
+        </h2>
+        <div
+          className="max-w-lg mx-auto p-4 rounded-lg bg-[#292929] w-full lg:min-w-[800px] min-h-[10vh] "
+          style={{ boxShadow: "0px 0px 29px 12px rgba(34, 34, 34, 0.5)" }}
+        >
+          <div className="relative w-full text-white">
+            <textarea
+              className="w-full p-2 min-h-[15vh] rounded-lg focus:outline-none"
+              placeholder="Ask me anything..."
+              value={userText}
+              onKeyDown={handleKeyPress}
+              onChange={handleUserText}
+            />
+            <button
+              className="absolute right-4 bottom-4 cursor-pointer rounded-full flex justify-center items-center w-[40px] h-[40px] bg-white"
+              onClick={handleSubmit}
+            >
+              {loading ? (
+                <StopCircleIcon />
+              ) : (
+                <GraphicEqIcon sx={{ color: "black" }} />
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
