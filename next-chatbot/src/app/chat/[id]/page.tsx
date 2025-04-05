@@ -16,8 +16,15 @@ type Chat = {
   content: string;
 };
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+
 export default function Page() {
   const pathname = usePathname();
+  const [counter, setCounter] = useState(0);
   const [open, setOpen] = useState(false);
   const [loading,setLoading] = useState(false);
   const [userEmail, setUserEmail] = useState("");
@@ -40,6 +47,35 @@ export default function Page() {
     }
   }, []);
 
+  useEffect(() => {
+    const storedChats = localStorage.getItem("chats");
+    if (storedChats) {
+      setChats(JSON.parse(storedChats));
+    }
+  }, []);
+
+  const fetchChats = async (usermail: string, sessionId: string) => {
+    try {
+      const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await fetch(`${baseURL}/getchats?username=${usermail}&session_id=${sessionId}`);
+      const data = await res.json();
+  
+      // Assuming `data` has one object with `messages` array
+      const rawMessages = data[0]?.messages || [];
+  
+      // Transform messages to your expected format
+      const formattedMessages = rawMessages.map((msg: ChatMessage) => ({
+        role: msg.role === "assistant" ? "bot" : "user",
+        content: msg.content,
+      }));
+  
+      setChats(formattedMessages);
+    } catch (error) {
+      console.error("Failed to fetch chats", error);
+      setChats([]);
+    }
+  };
+  
 
   useEffect(() => {
     const storedChats = localStorage.getItem("chats");
@@ -48,12 +84,21 @@ export default function Page() {
     }
   }, []);
 
+   useEffect(() => {
+      if (chats.length===0 && counter <1 && usermail && sessionId) {
+        setCounter(1);
+        fetchChats(usermail,sessionId);
+      }
+    }, [chats,usermail,sessionId,counter]);
+
+
   useEffect(() => {
     const segments = pathname.split('/');
     const id = segments[segments.length - 1];
     setSessionId(id);
   }, [pathname]);
   
+
   const handleSubmit = async () => {
     console.log(chats);
     setLoading(true);
@@ -161,6 +206,7 @@ export default function Page() {
 
       // If no error, update "Processing..." message to the bot response
       await streamBotResponse(botResponse);
+      setLoading(false);
     } catch (error) {
       console.log(error);
       // In case of error, update "Processing..." message to a generic error message
@@ -394,7 +440,7 @@ export default function Page() {
       />
 
 
-      <div className="w-[100%] max-w-[1500px] chats pb-20 h-[80vh] md:w-[60%] mx-auto p-4 flex flex-col gap-4 overflow-y-auto">
+      <div className="w-[100%] max-w-[1500px] chats pt-20 pb-20 h-[82vh] md:w-[60%] mx-auto p-4 flex flex-col gap-4 overflow-y-auto">
         {chats.map((chat, index) => (
           <div
             key={index}
@@ -459,7 +505,7 @@ export default function Page() {
       </div>
 
       <div
-        className="max-w-lg mx-auto p-4 lg:rounded-lg bg-[#292929] w-full lg:min-w-[800px] min-h-[10vh] fixed bottom-3 left-1/2 transform -translate-x-1/2"
+        className="max-w-lg mx-auto p-4 lg:rounded-lg bg-[#292929] w-full lg:min-w-[800px] min-h-[10vh] fixed xl:bottom-3 left-1/2 transform -translate-x-1/2"
         style={{ boxShadow: "0px 0px 29px 12px rgba(34, 34, 34, 0.5)" }}
       >
         <div className="relative w-full text-white">

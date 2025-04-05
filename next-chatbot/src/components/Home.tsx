@@ -267,7 +267,7 @@ export default function Home() {
               onChange={handleUserText}
             />
             <button
-              className="absolute right-4 bottom-4 cursor-pointer rounded-full flex justify-center items-center w-[40px] h-[40px] bg-white"
+              className={`absolute right-4 bottom-4 cursor-pointer rounded-full flex justify-center items-center w-[40px] h-[40px] ${loading ? "": "bg-white"}`}
               onClick={handleSubmit}
             >
               {loading ? (

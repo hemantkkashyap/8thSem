@@ -1,20 +1,30 @@
-import React, {useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   LinkedIn,
   GitHub,
   HelpOutline,
   Menu as MenuIcon,
 } from "@mui/icons-material";
-import {
-  Drawer,
-  IconButton,
-} from "@mui/material";
+import { useRouter } from "next/navigation";
+import { Drawer, IconButton } from "@mui/material";
 
+type ChatGroup = {
+  date: string;
+  sessions: {
+    session_id: string;
+    message: string;
+    displayDate: string;
+    sortDate: Date;
+    groupLabel: string;
+  }[];
+};
 
-type ChatDisplay = {
+type GroupedSession = {
   session_id: string;
   message: string;
-  date: string;
+  displayDate: string;
+  sortDate: Date;
+  groupLabel: string;
 };
 
 
@@ -45,15 +55,15 @@ const Navbar: React.FC<NavbarProps> = ({
   selectedOption,
   handleOptionClick,
 }) => {
-  const [chatHistory, setChatHistory] = useState<ChatDisplay[]>([]);
-
+  const [chatHistory, setChatHistory] = useState<ChatGroup[]>([]);
+  const navigate = useRouter();
   const [usermail, setUserMail] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("userIdToken");
     const mail = localStorage.getItem("userEmail");
     if (token) {
-      setUserMail(mail)
+      setUserMail(mail);
     }
   }, []);
 
@@ -62,7 +72,6 @@ const Navbar: React.FC<NavbarProps> = ({
     { name: "GitHub", icon: <GitHub className="text-black" /> },
     { name: "General", icon: <HelpOutline className="text-gray-700" /> },
   ];
-
 
   const toggleDrawer = (state: boolean) => () => {
     setOpen(state);
@@ -74,24 +83,47 @@ const Navbar: React.FC<NavbarProps> = ({
       const res = await fetch(`${baseURL}/gethistory?username=${usermail}`);
       const data: ChatSession[] = await res.json();
 
-      // Only show sessions with at least one user message
-      const filtered = data.map((session) => {
-        const lastUserMsg = [...session.messages]
-          .reverse()
-          .find((msg) => msg.role === "user");
-        return {
-          session_id: session.session_id,
-          message: lastUserMsg?.content || "No user message",
-          date: new Date(
-            session.updated_at || session.created_at
-          ).toLocaleString([], {
-            dateStyle: "short",
-            timeStyle: "short",
-          }),
-        };
-      });
+      const now = new Date();
+      const getDayLabel = (d: Date) => {
+        const diff = Math.floor(
+          (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        if (diff === 0) return "Today";
+        if (diff === 1) return "Yesterday";
+        return d.toLocaleDateString(undefined, { dateStyle: "long" });
+      };
 
-      setChatHistory(filtered);
+      const groupedMap: Record<string, GroupedSession[]> = {};
+
+      data
+        .map((session) => {
+          const dateObj = new Date(session.updated_at || session.created_at);
+          const lastUserMsg = [...session.messages]
+            .reverse()
+            .find((msg) => msg.role === "user");
+          return {
+            session_id: session.session_id,
+            message: lastUserMsg?.content || "No user message",
+            displayDate: dateObj.toLocaleTimeString([], {
+              timeStyle: "short",
+            }),
+            sortDate: dateObj,
+            groupLabel: getDayLabel(dateObj),
+          };
+        })
+        .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime())
+        .forEach((item) => {
+          if (!groupedMap[item.groupLabel]) groupedMap[item.groupLabel] = [];
+          groupedMap[item.groupLabel].push(item);
+        });
+
+      // Convert map to array for rendering
+      const grouped = Object.entries(groupedMap).map(([date, sessions]) => ({
+        date,
+        sessions,
+      }));
+
+      setChatHistory(grouped); // you'll need to update UI to loop over groups
     } catch (err) {
       console.error("Failed to fetch chat history", err);
       setChatHistory([]);
@@ -104,8 +136,17 @@ const Navbar: React.FC<NavbarProps> = ({
     }
   }, [open]);
 
+  const gotoChats = (myUniqueId: string) => {
+    try {
+      localStorage.removeItem("chats");
+      navigate.push(`/chat/${myUniqueId}`);
+    } catch (error) {
+      console.log(error);
+      
+    }
+  }
   return (
-    <div className="fixed top-0 left-0 z-50 flex w-full gap-2 p-4">
+    <div className="fixed top-0 left-0 z-50 flex w-full gap-2 p-4 bg-[#171717]">
       <div className="">
         <IconButton
           onClick={toggleDrawer(true)}
@@ -123,21 +164,17 @@ const Navbar: React.FC<NavbarProps> = ({
           onKeyDown={toggleDrawer(false)}
         >
           <h2 className="text-lg font-bold mb-4">Chat History</h2>
-          {chatHistory.length > 0 ? (
-            chatHistory.map((session, index) => (
-              <div
-                key={index}
-                className="mb-3 p-3 rounded flex justify-between cursor-pointer bg-[#292929] hover:bg-gray-700 transition-all"
-              >
-                                <p className="text-sm text-gray-300 truncate">
-                  {session.message}
-                </p>
-                <p className="text-sm font-semibold">{session.date}</p>
-              </div>
-            ))
-          ) : (
-            <p>No history found</p>
-          )}
+          {chatHistory.map((group) => (
+            <div key={group.date}>
+              <h2>{group.date}</h2>
+              {group.sessions.map((session) => (
+                <div key={session.session_id} className="flex w-full cursor-pointer justify-between p-2 hover:bg-gray-700 rounded-[3px]" onClick={() => gotoChats(session.session_id)}>
+                  <p>{session.message}</p>
+                  <small>{session.displayDate}</small>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </Drawer>
 
