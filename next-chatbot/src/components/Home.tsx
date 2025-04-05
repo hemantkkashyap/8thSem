@@ -55,6 +55,7 @@ export default function Home() {
             Authorization: `Bearer ${GROQ_API_KEY}`,
           },
           body: JSON.stringify({
+            username: "hemant",
             question: userText,
             type: type,
           }),
