@@ -1,4 +1,4 @@
-import React, { JSX, useEffect, useState } from "react";
+import React, {useEffect, useState } from "react";
 import {
   LinkedIn,
   GitHub,
@@ -8,16 +8,8 @@ import {
 import {
   Drawer,
   IconButton,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
 } from "@mui/material";
 
-type Option = {
-  name: string;
-  icon: JSX.Element;
-};
 
 type ChatDisplay = {
   session_id: string;
@@ -51,7 +43,6 @@ const Navbar: React.FC<NavbarProps> = ({
   open,
   setOpen,
   selectedOption,
-  setSelectedOption,
   handleOptionClick,
 }) => {
   const [chatHistory, setChatHistory] = useState<ChatDisplay[]>([]);

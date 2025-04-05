@@ -4,7 +4,6 @@ import { Fragment, useEffect, useState } from "react";
 import { usePathname } from 'next/navigation';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import GraphicEqIcon from '@mui/icons-material/GraphicEq';
-import firebaseGoogleLogin from "@/firebaseLogin";
 import Navbar from "@/components/Navbar";
 
 type EmailParsed = {
@@ -383,14 +382,6 @@ export default function Page() {
     }
   };
 
-  const handleLogin = async () => {
-    try {
-      await firebaseGoogleLogin();
-      alert("✅ Login Successful");
-    } catch {
-      alert("❌ Login Failed");
-    }
-  };
 
   return (
     <div className="w-full h-screen bg-[#171717] relative overflow-hidden">

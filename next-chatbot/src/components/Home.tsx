@@ -7,10 +7,6 @@ import GraphicEqIcon from "@mui/icons-material/GraphicEq";
 import firebaseGoogleLogin from "../firebaseLogin";
 import Navbar from "./Navbar";
 
-type EmailParsed = {
-  subject: string;
-  body: string;
-};
 
 type Chat = {
   role: "user" | "bot";
