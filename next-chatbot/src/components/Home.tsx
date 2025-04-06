@@ -41,12 +41,6 @@ export default function Home() {
     setLoading(true);
     const myUniqueId = uuidv4();
 
-    if(!userIdToken)
-    {
-      alert("Login First");
-      return
-    }
-
     if (!userText.trim()) {
       alert("Message cannot be empty");
       return;
