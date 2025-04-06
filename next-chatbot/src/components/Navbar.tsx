@@ -27,7 +27,6 @@ type GroupedSession = {
   groupLabel: string;
 };
 
-
 type ChatMessage = {
   role: "user" | "bot";
   content: string;
@@ -142,18 +141,19 @@ const Navbar: React.FC<NavbarProps> = ({
       navigate.push(`/chat/${myUniqueId}`);
     } catch (error) {
       console.log(error);
-      
     }
-  }
+  };
   return (
     <div className="fixed top-0 left-0 z-50 flex w-full gap-2 p-4 bg-[#171717]">
       <div className="">
-        <IconButton
-          onClick={toggleDrawer(true)}
-          className="bg-chatbotBlue hover:bg-indigo-700"
-        >
-          <MenuIcon sx={{ color: "white" }} />
-        </IconButton>
+        {usermail && (
+          <IconButton
+            onClick={toggleDrawer(true)}
+            className="bg-chatbotBlue hover:bg-indigo-700"
+          >
+            <MenuIcon sx={{ color: "white" }} />
+          </IconButton>
+        )}
       </div>
       {/* Material UI Drawer */}
       <Drawer anchor="left" open={open} onClose={toggleDrawer(false)}>
@@ -168,7 +168,11 @@ const Navbar: React.FC<NavbarProps> = ({
             <div key={group.date}>
               <h2>{group.date}</h2>
               {group.sessions.map((session) => (
-                <div key={session.session_id} className="flex w-full cursor-pointer justify-between p-2 hover:bg-gray-700 rounded-[3px]" onClick={() => gotoChats(session.session_id)}>
+                <div
+                  key={session.session_id}
+                  className="flex w-full cursor-pointer justify-between p-2 hover:bg-gray-700 rounded-[3px]"
+                  onClick={() => gotoChats(session.session_id)}
+                >
                   <p>{session.message}</p>
                   <small>{session.displayDate}</small>
                 </div>
