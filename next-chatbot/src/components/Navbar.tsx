@@ -232,7 +232,7 @@ const Navbar: React.FC<NavbarProps> = ({
             <Avatar
               alt={userName}
               src={userImage}
-              sx={{ width: 50, height: 50 }}
+              sx={{ width: 30, height: 30 }}
             />
             <div className="flex flex-col text-white">
               <Typography variant="subtitle1">{userName}</Typography>
