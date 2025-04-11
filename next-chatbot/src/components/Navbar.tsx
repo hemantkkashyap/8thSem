@@ -7,6 +7,21 @@ import {
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import { Drawer, IconButton } from "@mui/material";
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Typography,
+} from "@mui/material";
+import {
+  Avatar,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 type ChatGroup = {
   date: string;
@@ -57,6 +72,22 @@ const Navbar: React.FC<NavbarProps> = ({
   const [chatHistory, setChatHistory] = useState<ChatGroup[]>([]);
   const navigate = useRouter();
   const [usermail, setUserMail] = useState<string | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [userImage, setUserImage] = useState("");
+
+  useEffect(() => {
+    // Get user data from localStorage or an API
+    const name = localStorage.getItem("userEmail") || "Guest User";
+    const img = localStorage.getItem("userImage") || ""; // Optional image
+    setUserName(name);
+    setUserImage(img);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.clear(); // or just remove token-related keys
+    window.location.href = "/";
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("userIdToken");
@@ -158,27 +189,68 @@ const Navbar: React.FC<NavbarProps> = ({
       {/* Material UI Drawer */}
       <Drawer anchor="left" open={open} onClose={toggleDrawer(false)}>
         <div
-          className="w-90 lg:w-80 h-full bg-[#292929] text-white p-5"
+          className="w-90 lg:w-80 h-full bg-[#292929] text-white p-5 relative"
           role="presentation"
-          onClick={toggleDrawer(false)}
-          onKeyDown={toggleDrawer(false)}
         >
-          <h2 className="text-lg font-bold mb-4">Chat History</h2>
-          {chatHistory.map((group) => (
-            <div key={group.date}>
-              <h2>{group.date}</h2>
-              {group.sessions.map((session) => (
-                <div
-                  key={session.session_id}
-                  className="flex w-full cursor-pointer justify-between p-2 hover:bg-gray-700 rounded-[3px]"
-                  onClick={() => gotoChats(session.session_id)}
+          <div className="overflow-auto pb-[13vh] h-full hide-scrollbar">
+            <h2 className="text-lg font-bold mb-4">Chat History</h2>
+            {chatHistory.map((group, index) => (
+              <Accordion
+                key={group.date}
+                defaultExpanded={index === 0}
+                sx={{
+                  backgroundColor: "#292929",
+                  color: "white",
+                  boxShadow: "none",
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon sx={{ color: "white" }} />}
+                  aria-controls={`panel-${index}-content`}
+                  id={`panel-${index}-header`}
                 >
-                  <p>{session.message}</p>
-                  <small>{session.displayDate}</small>
-                </div>
-              ))}
+                  <Typography sx={{ fontWeight: 600 }}>{group.date}</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  {group.sessions.map((session) => (
+                    <div
+                      key={session.session_id}
+                      className="flex w-full cursor-pointer justify-between p-2 hover:bg-gray-700 rounded-[3px]"
+                      onClick={() => gotoChats(session.session_id)}
+                    >
+                      <p>{session.message}</p>
+                      <small>{session.displayDate}</small>
+                    </div>
+                  ))}
+                </AccordionDetails>
+              </Accordion>
+            ))}
+          </div>
+
+          {/* Fixed Footer */}
+          <div className="absolute bottom-0 left-0 w-full h-[12vh] bg-[#171717] flex items-center px-4 gap-4 ">
+            <Avatar
+              alt={userName}
+              src={userImage}
+              sx={{ width: 50, height: 50 }}
+            />
+            <div className="flex flex-col text-white">
+              <Typography variant="subtitle1">{userName}</Typography>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={() => setOpenDialog(true)}
+                sx={{
+                  mt: 1,
+                  borderColor: "white",
+                  color: "white",
+                }}
+              >
+                Logout
+              </Button>
             </div>
-          ))}
+          </div>
         </div>
       </Drawer>
 
@@ -210,6 +282,28 @@ const Navbar: React.FC<NavbarProps> = ({
           </div>
         )}
       </div>
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} 
+        PaperProps={{
+          sx: {
+            backgroundColor: "#1e1e1e", // Dark background
+            color: "white",             // Text color
+            borderRadius: 2,
+          },
+        }}>
+        <DialogTitle>Confirm Logout</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to logout?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleLogout} color="error">
+            Logout
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

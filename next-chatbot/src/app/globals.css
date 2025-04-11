@@ -42,3 +42,12 @@ body {
 body {
   font-family: 'Winky Sans', sans-serif; /* Set Winky Sans as the default font */
 }
+
+/* For modern browsers */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;    /* Firefox */
+}

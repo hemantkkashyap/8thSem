@@ -3,7 +3,7 @@ import "./globals.css";
 
 
 export const metadata: Metadata = {
-  title: "Ai Agent",
+  title: "AI CHATBOT FOR SMART USER ASSISTANCE",
   description: "Hemant Kashyap",
 };
 

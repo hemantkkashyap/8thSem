@@ -217,6 +217,7 @@ export default function Home() {
   const handleLogin = async () => {
     try {
       await firebaseGoogleLogin();
+      window.location.href = '/';
       alert("✅ Login Successful");
     } catch {
       alert("❌ Login Failed");
