@@ -189,7 +189,7 @@ const Navbar: React.FC<NavbarProps> = ({
       {/* Material UI Drawer */}
       <Drawer anchor="left" open={open} onClose={toggleDrawer(false)}>
         <div
-          className="w-90 lg:w-80 h-full bg-[#292929] text-white p-5 relative"
+          className="w-80 lg:w-80 h-full bg-[#292929] text-white p-5 relative"
           role="presentation"
         >
           <div className="overflow-auto pb-[13vh] h-full hide-scrollbar">

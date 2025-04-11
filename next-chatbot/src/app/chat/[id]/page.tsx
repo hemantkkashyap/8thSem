@@ -505,7 +505,7 @@ export default function Page() {
       </div>
 
       <div
-        className="max-w-lg mx-auto p-4 lg:rounded-lg bg-[#292929] w-full lg:min-w-[800px] min-h-[10vh] fixed xl:bottom-3 left-1/2 transform -translate-x-1/2"
+        className="max-w-lg mx-auto p-4 lg:rounded-lg bg-[#292929] w-full lg:min-w-[800px] min-h-[10vh] fixed xl:bottom-3 left-1/2 transform -translate-x-1/2 bottom-0"
         style={{ boxShadow: "0px 0px 29px 12px rgba(34, 34, 34, 0.5)" }}
       >
         <div className="relative w-full text-white">
